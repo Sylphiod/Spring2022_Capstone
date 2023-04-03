@@ -17,6 +17,9 @@ class UCharacterMovementComponent;
 class UHealthComponent;
 
 DECLARE_DELEGATE_OneParam(FOnHealthChanged, float);
+DECLARE_DELEGATE(FOnGrappleActivated);
+DECLARE_DELEGATE_OneParam(FOnGrappleCooldownStart, FTimerHandle&);
+DECLARE_DELEGATE(FOnGrappleCooldownEnd);
 UCLASS()
 class SPRING2022_CAPSTONE_API APlayerCharacter : public ACharacter
 {
@@ -25,12 +28,17 @@ class SPRING2022_CAPSTONE_API APlayerCharacter : public ACharacter
 public:
 	APlayerCharacter();
 
+	FOnHealthChanged OnHealthChangedDelegate;
+	FOnGrappleActivated OnGrappleActivatedDelegate;
+	FOnGrappleCooldownStart OnGrappleCooldownStartDelegate;
+	FOnGrappleCooldownEnd OnGrappleCooldownEndDelegate;
+
 	virtual void Tick(float DeltaTime) override;
 
 	virtual void SetupPlayerInputComponent(UInputComponent *PlayerInputComponent) override;
 	void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
-	void CalcCamera(float DeltaTime, struct FMinimalViewInfo& OutResult) override;
+	void CalcCamera(float DeltaTime, struct FMinimalViewInfo &OutResult) override;
 
 protected:
 	virtual void BeginPlay() override;
@@ -38,38 +46,67 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
 	UInputMappingContext *CharacterMappingContext;
 
+	////	MOVEMENT RELATED INPUT ACTIONS
+	/**
+	 * @brief Holds the Move Input Action
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
 	UInputAction *MoveAction;
+	/**
+	 * @brief Holds the Look Input Action
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
 	UInputAction *LookAction;
+	/**
+	 * @brief Holds the Jump Input Action
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction *JumpAction;
+	/**
+	 * @brief Holds the Sprint Input Action
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction *SprintAction;
+	/**
+	 * @brief Holds the Crouch Input Action
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction *CrouchAction;
 
+	////	CASTING AND ATTACK RELATED INPUT ACTIONS
+	/**
+	 * @brief Holds the Grapple Input Action
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction *GrappleAction;
+	/**
+	 * @brief Holds the Attack Input Action
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction *AttackAction;
+	/**
+	 * @brief Holds the Switch Weapons Input Action
+	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction *SwitchWeaponAction;
 
+	/**
+	 * @brief Health Component
+	 * @note Change health points using Set funtions
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	UHealthComponent *PlayerHealthComponent;
+	UHealthComponent *HealthComponent;
 
 	void Move(const FInputActionValue &Value);
 	void Look(const FInputActionValue &Value);
 	void Sprint(const FInputActionValue &Value);
 	void Crouch(const FInputActionValue &Value);
-
 	void Attack(const FInputActionValue &Value);
+	void Grapple(const FInputActionValue &Value);
 	// Switches ActiveWeapon between Weapon1 and Weapon2
 	void SwitchWeapon(const FInputActionValue &Value);
 
-	UFUNCTION(BlueprintCallable)
-	void TakeHit();
+	void UpdateHealthBar();
 
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = true))
@@ -98,9 +135,17 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Movement")
 	bool bIsSprinting;
 
-public:
+	UFUNCTION(BlueprintCallable)
+	void TakeHit();
 
-	FOnHealthChanged OnHealthChangedDelegate;
+public:
+	UFUNCTION()
+	void GrappleDone();
+
+	FTimerHandle handle;
+
+	void HealByPercentage(int percentage);
+	float GetMaxHealth() const;
 
 	// Sets Weapon references and sets to ActiveWeapon
 	void SetWeapon1(AWeaponBase *Weapon);

@@ -23,7 +23,7 @@ APlayerCharacter::APlayerCharacter()
 	Camera->SetRelativeLocation(FVector(-10.f, 0.f, 60.f));
 	Camera->bUsePawnControlRotation = true;
 
-	PlayerHealthComponent = CreateDefaultSubobject<UHealthComponent>(TEXT("PlayerHealthComponent"));
+	HealthComponent = CreateDefaultSubobject<UHealthComponent>(TEXT("HealthComponent"));
 
 	CrouchEyeOffset = FVector(0.f);
 	CrouchSpeed = 12.f;
@@ -38,10 +38,10 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent *PlayerInputCom
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &ACharacter::Jump);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 
+        EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Move);
+        EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Look);
+        EnhancedInputComponent->BindAction(GrappleAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Grapple);
 		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Crouch);
-
-		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Move);
-		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Look);
 
 		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Attack);
 		EnhancedInputComponent->BindAction(SwitchWeaponAction, ETriggerEvent::Completed, this,
@@ -64,6 +64,7 @@ void APlayerCharacter::BeginPlay()
 		}
 	}
 	Speed = GetCharacterMovement()->MaxWalkSpeed;
+	UpdateHealthBar();
 }
 
 void APlayerCharacter::Tick(float DeltaTime)
@@ -146,9 +147,31 @@ void APlayerCharacter::Attack(const FInputActionValue &Value)
 	ActiveWeapon->Shoot();
 }
 
+void APlayerCharacter::Grapple(const FInputActionValue &Value)
+{
+	if (OnGrappleActivatedDelegate.IsBound())
+    {
+		OnGrappleActivatedDelegate.Execute();
+    }
+	GetWorld()->GetTimerManager().SetTimer(handle, this, &APlayerCharacter::GrappleDone, 5, false);
+    if (OnGrappleCooldownStartDelegate.IsBound())
+    {
+		OnGrappleCooldownStartDelegate.Execute(handle);
+    }
+}
+
 void APlayerCharacter::SwitchWeapon(const FInputActionValue &Value)
 {
 	ActiveWeapon = (ActiveWeapon == Weapon1) ? Weapon2 : Weapon1;
+}
+
+void APlayerCharacter::GrappleDone()
+{
+	handle.Invalidate();
+	if (OnGrappleCooldownEndDelegate.IsBound())
+    {
+		OnGrappleCooldownEndDelegate.Execute();
+    }
 }
 
 void APlayerCharacter::SetWeapon1(AWeaponBase *Weapon)
@@ -175,12 +198,31 @@ AWeaponBase *APlayerCharacter::GetWeapon2() const
 
 void APlayerCharacter::TakeHit()
 {
-	if (PlayerHealthComponent)
+	if (HealthComponent)
 	{
-		PlayerHealthComponent->SetHealth(PlayerHealthComponent->GetHealth() - 5.0f);
-		if (OnHealthChangedDelegate.IsBound())
-		{
-			OnHealthChangedDelegate.Execute(PlayerHealthComponent->GetHealth());
-		}
+		HealthComponent->SetHealth(HealthComponent->GetHealth() - 5.0f);
+		UpdateHealthBar();
+	}
+}
+
+void APlayerCharacter::HealByPercentage(int percentage)
+{
+	if (HealthComponent)
+	{
+	HealthComponent->SetHealth(HealthComponent->GetHealth() + HealthComponent->GetMaxHealth() * percentage / 100);
+	UpdateHealthBar();
+	}
+}
+
+float APlayerCharacter::GetMaxHealth() const
+{
+    return HealthComponent->GetMaxHealth();
+}
+
+void APlayerCharacter::UpdateHealthBar()
+{
+	if (OnHealthChangedDelegate.IsBound())
+	{
+		OnHealthChangedDelegate.Execute(HealthComponent->GetHealth());
 	}
 }
