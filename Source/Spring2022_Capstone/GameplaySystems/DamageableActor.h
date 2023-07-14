@@ -14,7 +14,7 @@ class UDamageableActor : public UInterface
 };
 
 /**
- * 
+ *
  */
 class SPRING2022_CAPSTONE_API IDamageableActor
 {
@@ -22,7 +22,7 @@ class SPRING2022_CAPSTONE_API IDamageableActor
 
 public:
 	/**
-	 * @brief 
+	 * @brief
 	 * @param DamagingActor Actor sending damage to implementing class.
 	 * @param DamageAmount  Damage value of calling actor.
 	 */

@@ -5,9 +5,10 @@
 #include "CoreMinimal.h"
 #include "BaseEnemy.h"
 #include "Engine.h"
-#include "RangedEnemy.generated.h"
 #include "PlayerCharacter.h"
 #include "Kismet/GameplayStatics.h"
+#include "RangedEnemy.generated.h"
+
 
 
 /**
@@ -17,7 +18,7 @@ UCLASS()
 class SPRING2022_CAPSTONE_API ARangedEnemy : public ABaseEnemy
 {
 	GENERATED_BODY()
-		UPROPERTY(VisibleAnywhere)
+	
 		
 	
 
